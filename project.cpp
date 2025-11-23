@@ -4,8 +4,20 @@
 #include <iomanip>
 #include <sstream>
 #include <limits>
+#include <algorithm>
 
 using namespace std;
+
+// ==================== SIMPLE MINIMAL UI COLORS ====================
+
+const string RESET = "\033[0m";
+const string BOLD = "\033[1m";
+const string TITLE = "\033[1;36m"; // Bold cyan
+const string LABEL = "\033[1;37m"; // Bold white
+const string MUTED = "\033[90m";   // Grey
+const string GREEN = "\033[32m";
+const string YELLOW = "\033[33m";
+const string RED = "\033[31m";
 
 // ==================== UTILITY FUNCTIONS ====================
 
@@ -20,7 +32,7 @@ void clearScreen()
 
 void pause()
 {
-    cout << "\nPress Enter to continue...";
+    cout << MUTED << "\nPress Enter to continue..." << RESET;
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
     cin.get();
 }
@@ -88,26 +100,29 @@ struct Task
         switch (priority)
         {
         case 1:
-            return "High";
+            return RED + string("High") + RESET;
         case 2:
-            return "Medium";
+            return YELLOW + string("Medium") + RESET;
         case 3:
-            return "Low";
+            return GREEN + string("Low") + RESET;
         }
         return "Unknown";
     }
 
     void display() const
     {
-        cout << "\n----------------------------------------\n";
-        cout << "ID: " << id << "\n";
-        cout << "Title: " << title << "\n";
-        cout << "Description: " << description << "\n";
-        cout << "Category: " << category << "\n";
-        cout << "Priority: " << getPriorityString() << "\n";
-        cout << "Deadline: " << deadline.toString() << "\n";
-        cout << "Status: " << status << "\n";
-        cout << "----------------------------------------\n";
+        cout << "\n"
+             << MUTED << "----------------------------------------" << RESET << "\n";
+        cout << LABEL << "ID: " << RESET << id << "\n";
+        cout << LABEL << "Title: " << RESET << title << "\n";
+        cout << LABEL << "Description: " << RESET << description << "\n";
+        cout << LABEL << "Category: " << RESET << category << "\n";
+        cout << LABEL << "Priority: " << RESET << getPriorityString() << "\n";
+        cout << LABEL << "Deadline: " << RESET << deadline.toString() << "\n";
+
+        string statusColor = (status == "Completed" ? GREEN : YELLOW);
+        cout << LABEL << "Status: " << RESET << statusColor << status << RESET << "\n";
+        cout << MUTED << "----------------------------------------" << RESET << "\n";
     }
 };
 
@@ -190,9 +205,13 @@ public:
     {
         if (!head)
         {
-            cout << "\nNo tasks to display.\n";
+            cout << "\n"
+                 << MUTED << "No tasks to display." << RESET << "\n";
             return;
         }
+
+        cout << "\n"
+             << TITLE << BOLD << "All Tasks" << RESET << "\n";
         Node *temp = head;
         while (temp)
         {
@@ -250,7 +269,7 @@ public:
     bool isEmpty() const { return top == nullptr; }
 };
 
-// ==================== MIN HEAP (Priority Queue) ====================
+
 
 class PriorityQueue
 {
@@ -315,7 +334,7 @@ public:
     }
 };
 
-// ==================== HASH MAP ====================
+
 
 struct HashNode
 {
@@ -401,7 +420,6 @@ public:
     }
 };
 
-// ==================== TASK MANAGER ====================
 
 class TaskManager
 {
@@ -427,34 +445,39 @@ public:
     {
         clearScreen();
 
+        cout << TITLE << BOLD << "Add New Task" << RESET << "\n\n";
+
         Task t;
         t.id = nextId++;
 
         cin.ignore();
-        cout << "Enter Title: ";
+        cout << LABEL << "Enter Title: " << RESET;
         getline(cin, t.title);
 
-        cout << "Enter Description: ";
+        cout << LABEL << "Enter Description: " << RESET;
         getline(cin, t.description);
 
-        cout << "Enter Category: ";
+        cout << LABEL << "Enter Category: " << RESET;
         getline(cin, t.category);
 
-        cout << "Enter Priority (1-High, 2-Medium, 3-Low): ";
+        cout << LABEL << "Enter Priority (1-High, 2-Medium, 3-Low): " << RESET;
         cin >> t.priority;
 
         int d, m, y;
         do
         {
-            cout << "Enter Deadline (DD MM YYYY): ";
+            cout << LABEL << "Enter Deadline (DD MM YYYY): " << RESET;
             cin >> d >> m >> y;
             t.deadline = Date(d, m, y);
+            if (!t.deadline.isValid())
+                cout << RED << "Invalid date. Try again.\n"
+                     << RESET;
         } while (!t.deadline.isValid());
 
         tasks.insert(t);
         rebuildMap();
 
-        cout << "\nTask Added Successfully.";
+        cout << GREEN << "\nTask Added Successfully." << RESET;
         pause();
     }
 
@@ -471,10 +494,13 @@ public:
 
         if (tasks.getSize() == 0)
         {
-            cout << "\nNo tasks available.\n";
+            cout << MUTED << "\nNo tasks available.\n"
+                 << RESET;
             pause();
             return;
         }
+
+        cout << TITLE << BOLD << "Tasks by Earliest Deadline" << RESET << "\n";
 
         PriorityQueue pq(tasks.getSize());
         Node *temp = tasks.getHead();
@@ -496,8 +522,10 @@ public:
     {
         clearScreen();
 
+        cout << TITLE << BOLD << "Search Task" << RESET << "\n\n";
+
         int id;
-        cout << "Enter Task ID: ";
+        cout << LABEL << "Enter Task ID: " << RESET;
         cin >> id;
 
         Task *t = map.search(id);
@@ -505,7 +533,8 @@ public:
         if (t)
             t->display();
         else
-            cout << "\nTask Not Found.\n";
+            cout << RED << "\nTask Not Found.\n"
+                 << RESET;
 
         pause();
     }
@@ -513,14 +542,17 @@ public:
     void editTask()
     {
         clearScreen();
+        cout << TITLE << BOLD << "Edit Task" << RESET << "\n\n";
+
         int id;
-        cout << "Enter Task ID to Edit: ";
+        cout << LABEL << "Enter Task ID to Edit: " << RESET;
         cin >> id;
 
         Task *t = map.search(id);
         if (!t)
         {
-            cout << "\nTask Not Found.\n";
+            cout << RED << "\nTask Not Found.\n"
+                 << RESET;
             pause();
             return;
         }
@@ -528,43 +560,49 @@ public:
         Task old = *t;
 
         cin.ignore();
-        cout << "New Title: ";
+        cout << LABEL << "New Title: " << RESET;
         getline(cin, t->title);
 
-        cout << "New Description: ";
+        cout << LABEL << "New Description: " << RESET;
         getline(cin, t->description);
 
-        cout << "New Category: ";
+        cout << LABEL << "New Category: " << RESET;
         getline(cin, t->category);
 
-        cout << "New Priority (1-3): ";
+        cout << LABEL << "New Priority (1-3): " << RESET;
         cin >> t->priority;
 
         int d, m, y;
         do
         {
-            cout << "New Deadline (DD MM YYYY): ";
+            cout << LABEL << "New Deadline (DD MM YYYY): " << RESET;
             cin >> d >> m >> y;
             t->deadline = Date(d, m, y);
+            if (!t->deadline.isValid())
+                cout << RED << "Invalid date. Try again.\n"
+                     << RESET;
         } while (!t->deadline.isValid());
 
         undo.push(old, "UPDATE");
 
-        cout << "\nTask Updated.";
+        cout << GREEN << "\nTask Updated." << RESET;
         pause();
     }
 
     void deleteTask()
     {
         clearScreen();
+        cout << TITLE << BOLD << "Delete Task" << RESET << "\n\n";
+
         int id;
-        cout << "Enter Task ID to Delete: ";
+        cout << LABEL << "Enter Task ID to Delete: " << RESET;
         cin >> id;
 
         Task *t = map.search(id);
         if (!t)
         {
-            cout << "\nTask Not Found.\n";
+            cout << RED << "\nTask Not Found.\n"
+                 << RESET;
             pause();
             return;
         }
@@ -576,7 +614,7 @@ public:
 
         undo.push(backup, "DELETE");
 
-        cout << "\nTask Deleted.";
+        cout << GREEN << "\nTask Deleted." << RESET;
         pause();
     }
 
@@ -584,28 +622,32 @@ public:
     {
         clearScreen();
 
+        cout << TITLE << BOLD << "Change Task Status" << RESET << "\n\n";
+
         int id;
-        cout << "Enter Task ID: ";
+        cout << LABEL << "Enter Task ID: " << RESET;
         cin >> id;
 
         Task *t = map.search(id);
         if (!t)
         {
-            cout << "\nTask Not Found.\n";
+            cout << RED << "\nTask Not Found.\n"
+                 << RESET;
             pause();
             return;
         }
 
         Task old = *t;
 
-        cout << "1. Pending\n2. Completed\nEnter New Status: ";
+        cout << "1. Pending\n2. Completed\n";
+        cout << LABEL << "Enter New Status: " << RESET;
         int s;
         cin >> s;
 
         t->status = (s == 2 ? "Completed" : "Pending");
         undo.push(old, "UPDATE");
 
-        cout << "\nStatus Updated.";
+        cout << GREEN << "\nStatus Updated." << RESET;
         pause();
     }
 
@@ -613,9 +655,11 @@ public:
     {
         clearScreen();
 
+        cout << TITLE << BOLD << "Undo Last Operation" << RESET << "\n\n";
+
         if (undo.isEmpty())
         {
-            cout << "\nNothing to Undo.";
+            cout << MUTED << "\nNothing to Undo." << RESET;
             pause();
             return;
         }
@@ -629,14 +673,14 @@ public:
         {
             tasks.insert(t);
             rebuildMap();
-            cout << "\nRestored Deleted Task.";
+            cout << GREEN << "\nRestored Deleted Task." << RESET;
         }
         else if (op == "UPDATE")
         {
             Task *cur = map.search(t.id);
             if (cur)
                 *cur = t;
-            cout << "\nRestored Previous State.";
+            cout << GREEN << "\nRestored Previous State." << RESET;
         }
 
         pause();
@@ -645,6 +689,8 @@ public:
     void statistics()
     {
         clearScreen();
+        cout << TITLE << BOLD << "Statistics" << RESET << "\n";
+
         int total = 0, pending = 0, completed = 0;
 
         Node *temp = tasks.getHead();
@@ -658,33 +704,38 @@ public:
             temp = temp->next;
         }
 
-        cout << "\nTotal Tasks: " << total;
-        cout << "\nPending: " << pending;
-        cout << "\nCompleted: " << completed;
+        cout << "\n"
+             << LABEL << "Total Tasks: " << RESET << total;
+        cout << "\n"
+             << LABEL << "Pending: " << RESET << pending;
+        cout << "\n"
+             << LABEL << "Completed: " << RESET << completed << "\n";
 
         pause();
     }
 };
 
-// ==================== MENU ====================
-
 void displayMenu()
 {
+    cout << TITLE << BOLD;
     cout << "\n========================================\n";
     cout << "              TASK MANAGER              \n";
-    cout << "========================================\n";
-    cout << "1. Add New Task\n";
-    cout << "2. Display All Tasks\n";
-    cout << "3. Display by Priority/Deadline\n";
-    cout << "4. Search Task\n";
-    cout << "5. Edit Task\n";
-    cout << "6. Delete Task\n";
-    cout << "7. Change Status\n";
-    cout << "8. Undo Last Operation\n";
-    cout << "9. Statistics\n";
-    cout << "10. Exit\n";
-    cout << "========================================\n";
-    cout << "Enter your choice: ";
+    cout << "========================================\n"
+         << RESET;
+
+    cout << LABEL << "1." << RESET << "  Add New Task\n";
+    cout << LABEL << "2." << RESET << "  Display All Tasks\n";
+    cout << LABEL << "3." << RESET << "  Display by Priority/Deadline\n";
+    cout << LABEL << "4." << RESET << "  Search Task\n";
+    cout << LABEL << "5." << RESET << "  Edit Task\n";
+    cout << LABEL << "6." << RESET << "  Delete Task\n";
+    cout << LABEL << "7." << RESET << "  Change Status\n";
+    cout << LABEL << "8." << RESET << "  Undo Last Operation\n";
+    cout << LABEL << "9." << RESET << "  Statistics\n";
+    cout << LABEL << "10." << RESET << " Exit\n";
+
+    cout << "\n"
+         << LABEL << "Enter your choice: " << RESET;
 }
 
 // ==================== MAIN ====================
@@ -736,7 +787,14 @@ int main()
             manager.statistics();
             break;
         case 10:
+            clearScreen();
+            cout << GREEN << "Exiting Task Manager. Goodbye!\n"
+                 << RESET;
             return 0;
+        default:
+            cout << RED << "Invalid choice. Try again.\n"
+                 << RESET;
+            pause();
         }
     }
 }
